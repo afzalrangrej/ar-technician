@@ -874,10 +874,14 @@ app.patch('/api/admin/orders/:id', async (req, res) => {
   }
 });
 
-// Delete order record from database
-app.delete('/api/admin/orders/:id', async (req, res) => {
+// Delete order record from database (supports both Admin and User sides, by ID or tracking code)
+app.delete(['/api/admin/orders/:id', '/api/orders/:id', '/api/user/orders/:id', '/api/bookings/:id'], async (req, res) => {
   try {
-    await dbDriver.run(`DELETE FROM repair_orders WHERE id = ?`, [req.params.id]);
+    const idOrCode = req.params.id;
+    await dbDriver.run(
+      `DELETE FROM repair_orders WHERE id = ? OR UPPER(tracking_code) = UPPER(?)`,
+      [idOrCode, idOrCode]
+    );
     res.json({ success: true, message: 'Order record deleted from database.' });
   } catch (error) {
     res.status(500).json({ error: 'Database delete error.' });

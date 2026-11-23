@@ -4807,9 +4807,14 @@ function initUserLogin() {
                   <span>${o.service_type === 'home' ? '🏡 At-Home Visit' : '🏪 Shop Drop'}</span>
                   ${o.price_estimate ? `<span style="color:#fbbf24; font-weight:700; margin-left:6px;">₹${escapeHtml(String(o.price_estimate))}</span>` : ''}
                 </div>
-                <button type="button" class="btn-track-from-dash" data-code="${escapeHtml(trackingCode)}" style="background:linear-gradient(135deg, rgba(0,242,254,0.18), rgba(168,85,247,0.18)); border:1px solid var(--primary); color:var(--primary); border-radius:8px; padding:3px 10px; cursor:pointer; font-weight:700; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">
-                  <i class="fas fa-location-arrow"></i> Track Live
-                </button>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <button type="button" class="btn-track-from-dash" data-code="${escapeHtml(trackingCode)}" style="background:linear-gradient(135deg, rgba(0,242,254,0.18), rgba(168,85,247,0.18)); border:1px solid var(--primary); color:var(--primary); border-radius:8px; padding:3px 10px; cursor:pointer; font-weight:700; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">
+                    <i class="fas fa-location-arrow"></i> Track Live
+                  </button>
+                  <button type="button" class="btn-delete-booking-dash" data-code="${escapeHtml(trackingCode)}" data-id="${escapeHtml(String(o.id || ''))}" title="Delete this repair booking" style="background:rgba(239,68,68,0.14); border:1px solid rgba(239,68,68,0.45); color:#fca5a5; border-radius:8px; padding:3px 9px; cursor:pointer; font-weight:700; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">
+                    <i class="fas fa-trash-alt"></i> Delete
+                  </button>
+                </div>
               </div>
             </div>
           `;
@@ -4868,6 +4873,89 @@ function initUserLogin() {
             }
             if (trackerSection) {
               trackerSection.scrollIntoView({ behavior: 'smooth' });
+            }
+          });
+        });
+
+        // Bind delete booking buttons in dashboard (deletes from user & admin side)
+        dashOrdersList.querySelectorAll('.btn-delete-booking-dash').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const targetCode = (btn.getAttribute('data-code') || '').trim();
+            const targetId = (btn.getAttribute('data-id') || '').trim();
+            const targetKey = targetCode || targetId;
+
+            if (!confirm(`Are you sure you want to delete repair booking #${targetKey}?\n\nThis will remove it from both your account and admin records.`)) {
+              return;
+            }
+
+            // 1. Remove from currentUser.orders in localStorage('ar_customer_user')
+            let curUser = null;
+            try {
+              curUser = JSON.parse(localStorage.getItem('ar_customer_user') || 'null');
+              if (curUser && Array.isArray(curUser.orders)) {
+                curUser.orders = curUser.orders.filter(ord => {
+                  const ordCode = (ord.tracking_code || ord.code || '').trim().toUpperCase();
+                  const ordId = String(ord.id || '');
+                  const matchCode = targetCode && ordCode === targetCode.toUpperCase();
+                  const matchId = targetId && ordId === targetId;
+                  return !(matchCode || matchId);
+                });
+                localStorage.setItem('ar_customer_user', JSON.stringify(curUser));
+              }
+            } catch (err) { }
+
+            // 2. Remove from ar_local_bookings
+            try {
+              let localBookings = JSON.parse(localStorage.getItem('ar_local_bookings') || '[]');
+              if (Array.isArray(localBookings)) {
+                localBookings = localBookings.filter(ord => {
+                  const ordCode = (ord.tracking_code || ord.code || '').trim().toUpperCase();
+                  const ordId = String(ord.id || '');
+                  const matchCode = targetCode && ordCode === targetCode.toUpperCase();
+                  const matchId = targetId && ordId === targetId;
+                  return !(matchCode || matchId);
+                });
+                localStorage.setItem('ar_local_bookings', JSON.stringify(localBookings));
+              }
+            } catch (err) { }
+
+            // 3. Clear last_tracking_code if it was this code
+            try {
+              const lastCode = (localStorage.getItem('last_tracking_code') || '').trim().toUpperCase();
+              if (targetCode && lastCode === targetCode.toUpperCase()) {
+                localStorage.removeItem('last_tracking_code');
+              }
+            } catch (err) { }
+
+            // 4. Send DELETE request to backend API to remove from database (admin view)
+            const delTarget = targetCode || targetId;
+            const candidateEndpoints = [
+              `/api/user/orders/${encodeURIComponent(delTarget)}`,
+              `/api/orders/${encodeURIComponent(delTarget)}`,
+              `/api/admin/orders/${encodeURIComponent(delTarget)}`,
+              `/admin-api/orders/${encodeURIComponent(delTarget)}`
+            ];
+
+            for (const ep of candidateEndpoints) {
+              try {
+                if (typeof safeApiFetch === 'function') {
+                  await safeApiFetch(ep, { method: 'DELETE' });
+                } else {
+                  await fetch(ep, { method: 'DELETE' }).catch(() => {});
+                }
+              } catch (err) { }
+            }
+
+            // 5. Update user view immediately
+            showToast(`🗑️ Booking #${targetKey} deleted successfully.`, 'success');
+            if (typeof window.syncCustomerCodeVisibility === 'function') {
+              window.syncCustomerCodeVisibility();
+            }
+            const freshUser = curUser || getCurrentUser();
+            if (freshUser) {
+              openDashboard(freshUser);
             }
           });
         });
