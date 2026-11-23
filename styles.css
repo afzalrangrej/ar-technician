@@ -7830,10 +7830,7 @@ div[id*="netlify-badge"] {
    SEPARATE "MY BOOKINGS" SECTION & CODE COPY SYSTEM
    ======================================================== */
 .my-bookings-section {
-  background: radial-gradient(circle at 50% 0%, rgba(0, 242, 254, 0.08) 0%, rgba(8, 12, 20, 0.98) 75%);
-  padding: 3rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  scroll-margin-top: 80px;
+  display: none !important;
 }
 
 .my-bookings-wrapper {
