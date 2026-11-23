@@ -1089,6 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
   safeInit(initCustomerInvoiceAndReviews, 'initCustomerInvoiceAndReviews');
   safeInit(initAdminLiveStatusWatcher, 'initAdminLiveStatusWatcher');
   safeInit(initUserNoticeBoard, 'initUserNoticeBoard');
+  safeInit(initAdminRatingModal, 'initAdminRatingModal');
 });
 
 /* HERO IMAGE SLIDESHOW (3s/Image Auto Rotation) */
@@ -6387,6 +6388,7 @@ function initCustomerInvoiceAndReviews() {
         if (data.success) {
           markFeedbackCodeAsSubmitted(code);
           updateFeedbackFormView(code);
+          if (typeof syncAdminRatingDisplay === 'function') syncAdminRatingDisplay();
           showToast('⭐ Feedback submitted successfully!', 'success');
         } else {
           if (data.error && (data.error.includes('already') || data.error.includes('Duplicate'))) {
@@ -6502,6 +6504,7 @@ function initCustomerInvoiceAndReviews() {
         if (data.success) {
           markFeedbackCodeAsSubmitted(custCode);
           updateFeedbackFormView(custCode);
+          if (typeof syncAdminRatingDisplay === 'function') syncAdminRatingDisplay();
           showToast('⭐ Feedback submitted successfully!', 'success');
           if (reviewModal) reviewModal.classList.remove('active');
           reviewForm.reset();
@@ -6562,6 +6565,7 @@ function initCustomerInvoiceAndReviews() {
 
           markFeedbackCodeAsSubmitted(custCode);
           updateFeedbackFormView(custCode);
+          if (typeof syncAdminRatingDisplay === 'function') syncAdminRatingDisplay();
           showToast('⭐ Feedback submitted successfully!', 'success');
           if (reviewModal) reviewModal.classList.remove('active');
           reviewForm.reset();
@@ -6973,5 +6977,117 @@ function initAdminLiveStatusWatcher() {
    ======================================================== */
 function initUserCodePill() {
   // Standalone My Bookings section removed per user request
+}
+
+/* ========================================================
+   ADMIN / TECHNICIAN AVERAGE RATING DISPLAY & SYNC
+   ======================================================== */
+async function syncAdminRatingDisplay() {
+  const scoreEl = document.getElementById('admin-avg-score');
+  const countEl = document.getElementById('admin-reviews-total');
+  const modalScoreEl = document.getElementById('modal-admin-rating-score');
+  const modalSubEl = document.getElementById('modal-admin-rating-sub');
+
+  let avg = 4.9;
+  let count = 180;
+
+  // 1. Immediate local storage calculations for static / GitHub Pages / offline speed
+  try {
+    const localFb = JSON.parse(localStorage.getItem('ar_local_feedback') || '[]');
+    const localRatings = (localFb || []).map(f => Number(f.rating)).filter(n => !isNaN(n) && n > 0);
+    if (localRatings.length > 0) {
+      const baselineSum = 180 * 4.9;
+      const sum = localRatings.reduce((a, b) => a + b, 0);
+      count = 180 + localRatings.length;
+      avg = Math.round(((baselineSum + sum) / count) * 10) / 10;
+    }
+  } catch (e) { }
+
+  if (scoreEl) scoreEl.textContent = avg.toFixed(1);
+  if (countEl) countEl.textContent = `(${count}+ Reviews)`;
+  if (modalScoreEl) modalScoreEl.textContent = avg.toFixed(1);
+  if (modalSubEl) modalSubEl.textContent = `${count}+ Verified Customer Doorstep & Workshop Services`;
+
+  // 2. Fetch from backend /api/rating if available
+  try {
+    const apiBase = typeof getBackendApiBase === 'function' ? getBackendApiBase() : '';
+    const res = await fetch((apiBase || '') + '/api/rating');
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data && data.success && data.average) {
+        avg = Number(data.average);
+        count = Number(data.totalReviews || count);
+        if (scoreEl) scoreEl.textContent = avg.toFixed(1);
+        if (countEl) countEl.textContent = data.reviewsCountDisplay || `(${count}+ Reviews)`;
+        if (modalScoreEl) modalScoreEl.textContent = avg.toFixed(1);
+        if (modalSubEl) modalSubEl.textContent = `${count}+ Verified Customer Doorstep & Workshop Services`;
+      }
+    }
+  } catch (e) { }
+}
+
+function initAdminRatingModal() {
+  const ratingPill = document.getElementById('admin-rating-pill');
+  const modal = document.getElementById('admin-rating-trust-modal');
+  const closeBtn = document.getElementById('admin-rating-trust-close');
+  const reviewBtn = document.getElementById('btn-rating-modal-review');
+  const bookBtn = document.getElementById('btn-rating-modal-book');
+
+  syncAdminRatingDisplay();
+
+  if (!ratingPill || !modal) return;
+
+  function openRatingModal() {
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeRatingModal() {
+    modal.style.display = 'none';
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  ratingPill.addEventListener('click', (e) => {
+    e.preventDefault();
+    openRatingModal();
+  });
+
+  ratingPill.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openRatingModal();
+    }
+  });
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeRatingModal);
+  }
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeRatingModal();
+    }
+  });
+
+  if (reviewBtn) {
+    reviewBtn.addEventListener('click', () => {
+      closeRatingModal();
+      const revModal = document.getElementById('customer-review-modal');
+      if (revModal) {
+        revModal.classList.add('active');
+      } else {
+        const contactSec = document.getElementById('contact');
+        if (contactSec) contactSec.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  }
+
+  if (bookBtn) {
+    bookBtn.addEventListener('click', () => {
+      closeRatingModal();
+    });
+  }
 }
 

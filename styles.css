@@ -711,6 +711,89 @@ h6 {
 }
 
 /* ========================================================
+   ADMIN / TECHNICIAN AVERAGE RATING PILL (HERO SECTION)
+   ======================================================== */
+.admin-rating-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.38rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: 0.2px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1.5px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.admin-rating-pill:hover {
+  transform: translateY(-1px);
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #f59e0b;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.38);
+}
+
+.admin-rating-pill:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.admin-rating-pill .rating-stars-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.5px;
+  color: #fbbf24;
+  font-size: 0.76rem;
+  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.5));
+}
+
+.admin-rating-pill .rating-score {
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.84rem;
+  letter-spacing: 0.3px;
+  line-height: 1;
+}
+
+.admin-rating-pill .rating-reviews-count {
+  color: #fde68a;
+  font-weight: 600;
+  font-size: 0.74rem;
+  opacity: 0.95;
+  line-height: 1;
+}
+
+@media (max-width: 480px) {
+  .hero-status-row {
+    gap: 0.45rem;
+    margin-bottom: 0.35rem;
+  }
+  .admin-rating-pill,
+  .admin-status-pill {
+    padding: 0.32rem 0.68rem;
+    font-size: 0.76rem;
+  }
+  .admin-rating-pill .rating-stars-gold {
+    font-size: 0.7rem;
+    gap: 1.5px;
+  }
+  .admin-rating-pill .rating-score {
+    font-size: 0.78rem;
+  }
+  .admin-rating-pill .rating-reviews-count {
+    font-size: 0.7rem;
+  }
+}
+
+/* ========================================================
    USER CODE PILL ("My code: HOME-1234") - HERO SECTION
    ======================================================== */
 .user-code-pill {
