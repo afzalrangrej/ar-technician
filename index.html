@@ -1171,6 +1171,9 @@
         resume immediately once Admin turns Online.
       </p>
       <div class="offline-modal-actions" style="display: flex; flex-direction: column; gap: 0.65rem;">
+        <button type="button" class="btn btn-secondary" id="offline-login-btn" onclick="document.getElementById('admin-offline-modal').classList.remove('active'); if(typeof openLoginModal==='function')openLoginModal();" style="justify-content: center; width: 100%;">
+          <i class="fas fa-user-circle"></i> Customer Login / View My Account
+        </button>
         <a href="tel:+916351618067" class="btn btn-secondary" style="justify-content: center; width: 100%;">
           <i class="fas fa-phone-volume"></i> Call Kosamba Shop (+91 63516 18067)
         </a>

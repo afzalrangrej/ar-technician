@@ -1381,6 +1381,21 @@ window.requireCustomerLogin = function () {
 document.addEventListener('click', (e) => {
   const bookingTrigger = e.target.closest('.trigger-booking');
   if (bookingTrigger) {
+    // If visitor is not logged in, always allow them to log in / sign up first
+    if (typeof window.isCustomerLoggedIn === 'function' && !window.isCustomerLoggedIn()) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      const preset = bookingTrigger.getAttribute('data-service-preset');
+      window._pendingAuthAction = 'booking';
+      window._pendingServicePreset = preset;
+      if (typeof window.openLoginModal === 'function') {
+        window.openLoginModal(true);
+      }
+      showToast('🔒 Please log in or sign up to access your customer account.', 'info');
+      return;
+    }
+
     const isMoodOff = (localStorage.getItem('ar_admin_mood') === 'OFF' || localStorage.getItem('electro_admin_mood') === 'OFF');
     if (window.isAdminOnline === false || isMoodOff) {
       e.preventDefault();
@@ -3858,19 +3873,7 @@ function initBookingModal() {
 
   triggers.forEach(t => {
     t.addEventListener('click', (e) => {
-      const isMoodOff = (localStorage.getItem('ar_admin_mood') === 'OFF' || localStorage.getItem('electro_admin_mood') === 'OFF');
-      if (window.isAdminOnline === false || isMoodOff) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (typeof window.showAdminOfflineNotice === 'function') {
-          window.showAdminOfflineNotice();
-        } else {
-          showToast('🔴 Admin is currently offline. Repair bookings are paused.', 'warning');
-        }
-        return;
-      }
-
-      // If user clicks on booking repair without login, redirect to login page
+      // If user clicks on booking repair without login, always allow them to log in / sign up first
       if (!window.isCustomerLoggedIn()) {
         e.preventDefault();
         e.stopPropagation();
@@ -3880,7 +3883,19 @@ function initBookingModal() {
         if (typeof window.openLoginModal === 'function') {
           window.openLoginModal(true);
         }
-        showToast('🔒 Please log in or sign up to book a repair service.', 'info');
+        showToast('🔒 Please log in or sign up to access your customer account.', 'info');
+        return;
+      }
+
+      const isMoodOff = (localStorage.getItem('ar_admin_mood') === 'OFF' || localStorage.getItem('electro_admin_mood') === 'OFF');
+      if (window.isAdminOnline === false || isMoodOff) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof window.showAdminOfflineNotice === 'function') {
+          window.showAdminOfflineNotice();
+        } else {
+          showToast('🔴 Admin is currently offline. Repair bookings are paused.', 'warning');
+        }
         return;
       }
 
@@ -4828,9 +4843,8 @@ function initUserLogin() {
           window._pendingAuthAction = null;
           const isMoodOff = (localStorage.getItem('ar_admin_mood') === 'OFF' || localStorage.getItem('electro_admin_mood') === 'OFF');
           if (window.isAdminOnline === false || isMoodOff) {
-            if (typeof window.showAdminOfflineNotice === 'function') {
-              window.showAdminOfflineNotice();
-            }
+            showToast(`🎉 Welcome back, ${loggedUser.name}! You are logged in. (Bookings are paused while Admin is Service Off)`, 'info');
+            openDashboard(loggedUser);
             return;
           }
           setTimeout(() => {
@@ -4977,9 +4991,8 @@ function initUserLogin() {
           window._pendingAuthAction = null;
           const isMoodOff = (localStorage.getItem('ar_admin_mood') === 'OFF' || localStorage.getItem('electro_admin_mood') === 'OFF');
           if (window.isAdminOnline === false || isMoodOff) {
-            if (typeof window.showAdminOfflineNotice === 'function') {
-              window.showAdminOfflineNotice();
-            }
+            showToast(`🎉 Welcome, ${loggedUser.name}! Account created & logged in. (Bookings are paused while Admin is Service Off)`, 'info');
+            openDashboard(loggedUser);
             return;
           }
           setTimeout(() => {
