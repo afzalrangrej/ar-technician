@@ -1518,7 +1518,7 @@ app.get('/api/rating', async (req, res) => {
       average: avg,
       ratingDisplay: avg.toFixed(1),
       totalReviews: totalCount,
-      reviewsCountDisplay: `(${totalCount}+ Reviews)`
+      reviewsCountDisplay: ''
     });
   } catch (e) {
     res.json({
@@ -1526,7 +1526,7 @@ app.get('/api/rating', async (req, res) => {
       average: 4.9,
       ratingDisplay: '4.9',
       totalReviews: 180,
-      reviewsCountDisplay: '(180+ Reviews)'
+      reviewsCountDisplay: ''
     });
   }
 });

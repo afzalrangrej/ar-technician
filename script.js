@@ -1980,7 +1980,7 @@ function renderThanksNote(order, box) {
             </div>
           </div>
           <div class="thanks-rating-badge">
-            <i class="fas fa-star"></i> 4.9 (180+ Doorstep Visits)
+            <i class="fas fa-star"></i> 4.9 Rating
           </div>
         </div>
 
@@ -2588,7 +2588,7 @@ function initTracker() {
             <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
               <h4 style="margin:0; font-size:1.15rem; color:#fff;">${techName}</h4>
               <span style="background:rgba(251,191,36,0.15); border:1px solid rgba(251,191,36,0.3); color:#fbbf24; font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:6px;">
-                ★ 4.9 (180+ Doorstep Visits)
+                ★ 4.9 Rating
               </span>
             </div>
             <div class="driver-meta" style="margin-top:0.45rem; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
@@ -6989,7 +6989,6 @@ async function syncAdminRatingDisplay() {
   const modalSubEl = document.getElementById('modal-admin-rating-sub');
 
   let avg = 4.9;
-  let count = 180;
 
   // 1. Immediate local storage calculations for static / GitHub Pages / offline speed
   try {
@@ -6998,15 +6997,15 @@ async function syncAdminRatingDisplay() {
     if (localRatings.length > 0) {
       const baselineSum = 180 * 4.9;
       const sum = localRatings.reduce((a, b) => a + b, 0);
-      count = 180 + localRatings.length;
+      const count = 180 + localRatings.length;
       avg = Math.round(((baselineSum + sum) / count) * 10) / 10;
     }
   } catch (e) { }
 
   if (scoreEl) scoreEl.textContent = avg.toFixed(1);
-  if (countEl) countEl.textContent = `(${count}+ Reviews)`;
+  if (countEl) countEl.remove();
   if (modalScoreEl) modalScoreEl.textContent = avg.toFixed(1);
-  if (modalSubEl) modalSubEl.textContent = `${count}+ Verified Customer Doorstep & Workshop Services`;
+  if (modalSubEl) modalSubEl.textContent = 'Verified Customer Doorstep & Workshop Services';
 
   // 2. Fetch from backend /api/rating if available
   try {
@@ -7016,11 +7015,10 @@ async function syncAdminRatingDisplay() {
       const data = await res.json();
       if (data && data.success && data.average) {
         avg = Number(data.average);
-        count = Number(data.totalReviews || count);
         if (scoreEl) scoreEl.textContent = avg.toFixed(1);
-        if (countEl) countEl.textContent = data.reviewsCountDisplay || `(${count}+ Reviews)`;
+        if (countEl) countEl.remove();
         if (modalScoreEl) modalScoreEl.textContent = avg.toFixed(1);
-        if (modalSubEl) modalSubEl.textContent = `${count}+ Verified Customer Doorstep & Workshop Services`;
+        if (modalSubEl) modalSubEl.textContent = 'Verified Customer Doorstep & Workshop Services';
       }
     }
   } catch (e) { }
