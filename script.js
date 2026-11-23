@@ -5683,7 +5683,7 @@ function initAdminLogin() {
         } catch (err) { }
 
         showToast(`🔓 Admin access verified for Afzal (${verifiedPhone}). Opening Admin Dashboard...`, 'success');
-        window.open('/admin', '_blank');
+        window.open('admin.html', '_blank');
         return;
       }
 
@@ -5804,7 +5804,7 @@ function initAdminLogin() {
             submitBtn.innerHTML = `<span class="btn-text"><i class="fas fa-arrow-right-to-bracket"></i> Login to Admin Portal</span><span class="btn-shine"></span>`;
           }
           // Redirect to Admin Portal
-          window.open('/admin', '_blank');
+          window.open('admin.html', '_blank');
         }, 1000);
 
       } else {
