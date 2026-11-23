@@ -999,6 +999,9 @@ window.syncCustomerCodeVisibility = function () {
     }
   } else {
     // No active booking code: Hide tracker helper cards
+    const pasteBanner = document.getElementById('tracker-paste-code-banner');
+    const chipsRow = document.getElementById('tracker-codes-chips-row');
+    const bannerCodesContainer = document.getElementById('tracker-banner-codes');
     if (pasteBanner) pasteBanner.style.display = 'none';
     if (chipsRow) chipsRow.style.display = 'none';
     if (bannerCodesContainer) bannerCodesContainer.innerHTML = '';
@@ -1415,21 +1418,28 @@ window.dismissWelcomeScreen = function () { };
 
 document.addEventListener('DOMContentLoaded', () => {
   document.body.classList.remove('auth-locked');
-  initLanguageSwitcher();
-  initNavbar();
-  initShopLocation();
-  initAreaChecker();
-  initEstimator();
-  initTracker();
-  initHeroSlideshow();
-  initBookingModal();
-  initAdminLogin();
-  initUserLogin();
-  initUserCodePill();
-  initLiveBroadcast();
-  initCustomerInvoiceAndReviews();
-  initAdminLiveStatusWatcher();
-  initUserNoticeBoard();
+  const safeInit = (fn, name) => {
+    try {
+      if (typeof fn === 'function') fn();
+    } catch (e) {
+      console.warn(`[Init] ${name || fn.name} warning:`, e);
+    }
+  };
+  safeInit(initLanguageSwitcher, 'initLanguageSwitcher');
+  safeInit(initNavbar, 'initNavbar');
+  safeInit(initUserLogin, 'initUserLogin');
+  safeInit(initBookingModal, 'initBookingModal');
+  safeInit(initAdminLogin, 'initAdminLogin');
+  safeInit(initShopLocation, 'initShopLocation');
+  safeInit(initAreaChecker, 'initAreaChecker');
+  safeInit(initEstimator, 'initEstimator');
+  safeInit(initTracker, 'initTracker');
+  safeInit(initHeroSlideshow, 'initHeroSlideshow');
+  safeInit(initUserCodePill, 'initUserCodePill');
+  safeInit(initLiveBroadcast, 'initLiveBroadcast');
+  safeInit(initCustomerInvoiceAndReviews, 'initCustomerInvoiceAndReviews');
+  safeInit(initAdminLiveStatusWatcher, 'initAdminLiveStatusWatcher');
+  safeInit(initUserNoticeBoard, 'initUserNoticeBoard');
 });
 
 /* HERO IMAGE SLIDESHOW (3s/Image Auto Rotation) */
