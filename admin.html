@@ -4405,18 +4405,24 @@
 
     function getOrderDecisionType(o) {
       if (!o) return 'pending';
-      const st = String(o.status || '').toLowerCase();
+      const st = String(o.status || '').toLowerCase().trim();
+      if (!st || st === 'booked' || st.includes('pending') || st.includes('await')) {
+        return 'pending';
+      }
       if (st.includes('reject') || st.includes('cancel') || st.includes('decline') || o.step === 0) {
         return 'rejected';
       }
-      if (st.includes('accept') || st.includes('departure') || st.includes('depart') || st.includes('home') || st.includes('doorstep') || st.includes('dispatch') || st.includes('route') || st.includes('transit') || st.includes('repair') || st.includes('diagnos') || st.includes('complete') || st.includes('done') || (typeof o.step === 'number' && o.step >= 1)) {
+      if (st.includes('accept') || st.includes('departure') || st.includes('depart') || st.includes('home') || st.includes('doorstep') || st.includes('dispatch') || st.includes('route') || st.includes('transit') || st.includes('repair') || st.includes('diagnos') || st.includes('complete') || st.includes('done') || (typeof o.step === 'number' && o.step >= 2)) {
         return 'accepted';
       }
       return 'pending'; // Default 'Booked' / 'Pending'
     }
 
     function getStatusBadgeHtml(status) {
-      const s = String(status || '').toLowerCase();
+      const s = String(status || '').toLowerCase().trim();
+      if (!s || s === 'booked' || s.includes('pending') || s.includes('await')) {
+        return `<span class="badge" style="background:rgba(251,191,36,0.16); color:#fbbf24; border:1px solid rgba(251,191,36,0.4);"><i class="fas fa-hourglass-half"></i> Pending</span>`;
+      }
       if (s.includes('reject') || s.includes('cancel') || s.includes('decline')) {
         return `<span class="badge badge-Reject"><i class="fas fa-circle-xmark"></i> Reject</span>`;
       }
