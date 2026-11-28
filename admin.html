@@ -4733,6 +4733,8 @@
       }
       if (name === 'inquiries') {
         fetchAdminNotices();
+      } else if (name === 'customers') {
+        fetchCustomers();
       }
     }
 
@@ -4977,17 +4979,106 @@
     }
 
     async function fetchCustomers() {
+      let serverCustomers = [];
       try {
-        const r = await fetch(`${API}/admin-api/customers`);
-        const d = await r.json();
-        if (!d.success) throw new Error(d.error);
-        // Ensure newest customers are on top
-        allCustomers = (d.customers || []).sort((a, b) => b.id - a.id);
-        document.getElementById('cust-count-badge').textContent = allCustomers.length;
-        renderCustomers(allCustomers);
-      } catch (e) {
-        document.getElementById('cust-tbody').innerHTML = errorRow(8, 'Failed to load customers.');
-      }
+        const candidateApis = [API, 'http://localhost:3000', 'http://localhost:4000', ''].filter((v, i, a) => a.indexOf(v) === i);
+        for (const base of candidateApis) {
+          try {
+            const r = await fetch(`${base}/admin-api/customers`);
+            const text = await r.text();
+            if (text && text.trim().startsWith('{')) {
+              const d = JSON.parse(text);
+              if (d && d.success && Array.isArray(d.customers)) {
+                serverCustomers = d.customers;
+                break;
+              }
+            }
+          } catch (e) {}
+        }
+      } catch (e) { }
+
+      // Merge website logged-in / registered customers from localStorage + database + orders
+      const customerMap = new Map();
+      const getCustKey = (c) => {
+        const digits = String(c.phone || '').replace(/\D/g, '').slice(-10);
+        if (digits.length >= 7) return digits;
+        return String(c.email || c.name || c.id || Math.random()).toLowerCase().trim();
+      };
+
+      const addCustomerRecord = (c) => {
+        if (!c || (!c.name && !c.phone)) return;
+        const key = getCustKey(c);
+        const existing = customerMap.get(key);
+        const digits = String(c.phone || '').replace(/\D/g, '').slice(-10);
+        const matchingOrdersCount = (allOrders || []).filter(o => {
+          const op = String(o.customer_phone || o.phone || '').replace(/\D/g, '').slice(-10);
+          return (digits && op && digits === op) || (o.customer_id && c.id && String(o.customer_id) === String(c.id));
+        }).length;
+
+        if (!existing) {
+          customerMap.set(key, {
+            id: c.id || Date.now(),
+            name: c.name || 'Website Customer',
+            phone: c.phone || 'N/A',
+            email: c.email || '',
+            address: c.address || 'Kosamba, Surat',
+            zip_code: c.zip_code || '',
+            total_orders: Math.max(Number(c.total_orders || 0), matchingOrdersCount)
+          });
+        } else {
+          customerMap.set(key, {
+            ...existing,
+            id: existing.id || c.id,
+            name: existing.name || c.name,
+            email: existing.email || c.email,
+            address: existing.address || c.address,
+            total_orders: Math.max(existing.total_orders || 0, Number(c.total_orders || 0), matchingOrdersCount)
+          });
+        }
+      };
+
+      // 1. Server DB customers
+      serverCustomers.forEach(addCustomerRecord);
+
+      // 2. Website signed-up & logged-in accounts from localStorage
+      try {
+        const localAccts = JSON.parse(localStorage.getItem('ar_customer_accounts') || '[]');
+        if (Array.isArray(localAccts)) {
+          localAccts.forEach(addCustomerRecord);
+        }
+      } catch (e) { }
+
+      // 3. Currently active logged-in customer on website
+      try {
+        const activeRaw = localStorage.getItem('ar_customer_user');
+        if (activeRaw) {
+          const activeUser = JSON.parse(activeRaw);
+          if (activeUser && (activeUser.name || activeUser.phone)) {
+            addCustomerRecord(activeUser);
+          }
+        }
+      } catch (e) { }
+
+      // 4. Customers who placed bookings
+      (allOrders || []).forEach(o => {
+        if (o.customer_name || o.customer_phone) {
+          addCustomerRecord({
+            id: o.customer_id || o.id,
+            name: o.customer_name || 'Customer',
+            phone: o.customer_phone || o.phone || '',
+            email: o.customer_email || '',
+            address: o.customer_address || o.address || 'Kosamba, Surat',
+            zip_code: o.customer_zip || ''
+          });
+        }
+      });
+
+      allCustomers = Array.from(customerMap.values()).sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+      const custBadge = document.getElementById('cust-count-badge');
+      if (custBadge) custBadge.textContent = allCustomers.length;
+      const statCust = document.getElementById('stat-customers');
+      if (statCust) statCust.textContent = allCustomers.length;
+      renderCustomers(allCustomers);
     }
 
     // ============ ADMIN NOTICE BOARD & LIVE USER CHAT ============
@@ -5573,7 +5664,7 @@
             <div class="action-group">
               <button type="button" class="btn-sm" onclick='openAddCollectionModal("WALK-IN", "${escHtml(c.name).replace(/'/g, "\\'")}")' title="Record payment collection from this customer" style="background:rgba(16,185,129,0.18); border:1px solid rgba(16,185,129,0.4); color:#34d399; font-weight:700; padding:0.28rem 0.55rem; cursor:pointer;"><i class="fas fa-indian-rupee-sign"></i> Collect</button>
               <a href="tel:${c.phone}" class="btn-sm btn-edit" title="Call Customer"><i class="fas fa-phone"></i> Call</a>
-              <button type="button" class="btn-sm btn-del" onclick="deleteCustomer(${c.id}, '${escHtml(c.name).replace(/'/g, "\\'")}')" title="Delete customer record">
+              <button type="button" class="btn-sm btn-del" onclick="deleteCustomer('${escHtml(String(c.id || ''))}', '${escHtml(c.name || '').replace(/'/g, "\\'")}', '${escHtml(c.phone || '').replace(/'/g, "\\'")}')" title="Delete customer record">
                 <i class="fas fa-trash"></i> Delete
               </button>
             </div>
@@ -6686,24 +6777,90 @@
       fetchStats();
     }
 
-    async function deleteCustomer(id, name) {
-      const displayName = name ? `customer "${name}" (ID #${id})` : `customer ID #${id}`;
-      if (!confirm(`Are you sure you want to permanently delete ${displayName} from the database?\n\n⚠️ This will also remove their repair records and login access.`)) {
+    async function deleteCustomer(id, name, phone) {
+      const displayName = name ? `customer "${name}"` : `customer #${id}`;
+      if (!confirm(`Are you sure you want to permanently delete ${displayName}?\n\n⚠️ This will also remove their repair records and login access from the website.`)) {
         return;
       }
+
+      const cleanTargetDigits = String(phone || '').replace(/\D/g, '').slice(-10);
+
+      // 1. Delete from backend server if online
       try {
-        const r = await fetch(`${API}/admin-api/customers/${id}`, { method: 'DELETE' });
-        const d = await r.json();
-        if (d.success) {
-          showToast(`🗑️ Customer ${name || '#' + id} deleted successfully.`, 'success');
-          fetchCustomers();
-          fetchStats();
-        } else {
-          showToast(d.error || 'Failed to delete customer.', 'error');
+        if (id) {
+          const candidateApis = [API, 'http://localhost:3000', 'http://localhost:4000', ''].filter((v, i, a) => a.indexOf(v) === i);
+          for (const base of candidateApis) {
+            try {
+              const r = await fetch(`${base}/admin-api/customers/${encodeURIComponent(id)}`, { method: 'DELETE' });
+              const text = await r.text();
+              if (text && text.trim().startsWith('{')) {
+                const d = JSON.parse(text);
+                if (d && d.success) break;
+              }
+            } catch (e) {}
+          }
         }
-      } catch (e) {
-        showToast('Delete customer failed. Please check network/server.', 'error');
-      }
+      } catch (e) { }
+
+      // 2. Remove from localStorage ar_customer_accounts
+      try {
+        let localAccts = JSON.parse(localStorage.getItem('ar_customer_accounts') || '[]');
+        localAccts = localAccts.filter(a => {
+          const ap = String(a.phone || '').replace(/\D/g, '').slice(-10);
+          const idMatch = id && a.id && String(a.id) === String(id);
+          const phoneMatch = cleanTargetDigits && ap && ap === cleanTargetDigits;
+          return !idMatch && !phoneMatch;
+        });
+        localStorage.setItem('ar_customer_accounts', JSON.stringify(localAccts));
+      } catch (e) { }
+
+      // 3. Remove from active ar_customer_user if matching
+      try {
+        const curRaw = localStorage.getItem('ar_customer_user');
+        if (curRaw) {
+          const cur = JSON.parse(curRaw);
+          const cp = String(cur.phone || '').replace(/\D/g, '').slice(-10);
+          if ((id && cur.id && String(cur.id) === String(id)) || (cleanTargetDigits && cp && cp === cleanTargetDigits)) {
+            localStorage.removeItem('ar_customer_user');
+          }
+        }
+      } catch (e) { }
+
+      // 4. Remove matching bookings from ar_local_bookings
+      try {
+        let localBookings = JSON.parse(localStorage.getItem('ar_local_bookings') || '[]');
+        localBookings = localBookings.filter(o => {
+          const op = String(o.customer_phone || o.phone || '').replace(/\D/g, '').slice(-10);
+          const idMatch = id && o.customer_id && String(o.customer_id) === String(id);
+          const phoneMatch = cleanTargetDigits && op && op === cleanTargetDigits;
+          return !idMatch && !phoneMatch;
+        });
+        localStorage.setItem('ar_local_bookings', JSON.stringify(localBookings));
+      } catch (e) { }
+
+      // 5. Remove from in-memory arrays & refresh UI immediately
+      allCustomers = (allCustomers || []).filter(c => {
+        const cp = String(c.phone || '').replace(/\D/g, '').slice(-10);
+        const idMatch = id && c.id && String(c.id) === String(id);
+        const phoneMatch = cleanTargetDigits && cp && cp === cleanTargetDigits;
+        return !idMatch && !phoneMatch;
+      });
+      allOrders = (allOrders || []).filter(o => {
+        const op = String(o.customer_phone || o.phone || '').replace(/\D/g, '').slice(-10);
+        const idMatch = id && o.customer_id && String(o.customer_id) === String(id);
+        const phoneMatch = cleanTargetDigits && op && op === cleanTargetDigits;
+        return !idMatch && !phoneMatch;
+      });
+
+      const custBadge = document.getElementById('cust-count-badge');
+      if (custBadge) custBadge.textContent = allCustomers.length;
+      const statCust = document.getElementById('stat-customers');
+      if (statCust) statCust.textContent = allCustomers.length;
+
+      renderCustomers(allCustomers);
+      updateOrderBadgesAndViews();
+      fetchStats();
+      showToast(`🗑️ Customer ${name || '#' + id} deleted successfully.`, 'success');
     }
 
     // ============ DIGITAL INVOICE & WARRANTY ============

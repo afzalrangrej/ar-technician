@@ -1155,6 +1155,24 @@ app.delete('/admin-api/orders/:id', requireAuth, async (req, res) => {
 // All customers (protected)
 app.get('/admin-api/customers', requireAuth, async (req, res) => {
   try {
+    // Ensure any users who logged in or signed up in users table are listed in customers
+    const usersList = await dbDriver.query(`SELECT * FROM users`);
+    for (const u of (usersList || [])) {
+      const cleanP = String(u.phone || '').replace(/[^0-9]/g, '');
+      let exists = null;
+      if (cleanP.length >= 10) {
+        exists = await dbDriver.get(`SELECT id FROM customers WHERE phone = ? OR phone LIKE ? LIMIT 1`, [u.phone, `%${cleanP.slice(-10)}%`]);
+      } else {
+        exists = await dbDriver.get(`SELECT id FROM customers WHERE phone = ? LIMIT 1`, [u.phone]);
+      }
+      if (!exists && (u.name || u.phone)) {
+        await dbDriver.run(
+          `INSERT INTO customers (name, email, phone, address, zip_code) VALUES (?, ?, ?, ?, ?)`,
+          [u.name || 'Website Customer', u.email || null, u.phone || '', 'Website Login', '394120']
+        );
+      }
+    }
+
     const customers = await dbDriver.query(`
       SELECT c.*, COUNT(ro.id) as total_orders, COALESCE(SUM(ro.price_estimate), 0) as total_spent
       FROM customers c

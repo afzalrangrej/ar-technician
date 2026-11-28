@@ -4106,6 +4106,30 @@ function initUserLogin() {
   function setCurrentUser(user) {
     if (user) {
       localStorage.setItem('ar_customer_user', JSON.stringify(user));
+      // Sync logged-in user into ar_customer_accounts so Admin Customer Directory displays them
+      try {
+        const accounts = JSON.parse(localStorage.getItem('ar_customer_accounts') || '[]');
+        const userDigits = String(user.phone || user.identifier || '').replace(/\D/g, '').slice(-10);
+        const idx = accounts.findIndex(a => {
+          const ap = String(a.phone || '').replace(/\D/g, '').slice(-10);
+          return (userDigits && ap && ap === userDigits) || (a.id && user.id && String(a.id) === String(user.id));
+        });
+        const acctEntry = {
+          id: user.id || (idx >= 0 ? accounts[idx].id : Date.now()),
+          name: user.name || (idx >= 0 ? accounts[idx].name : 'Website Customer'),
+          phone: user.phone || (userDigits ? '+91 ' + userDigits : ''),
+          email: user.email || (idx >= 0 ? accounts[idx].email : ''),
+          address: user.address || (idx >= 0 ? accounts[idx].address : 'Kosamba, Surat'),
+          password: (idx >= 0 && accounts[idx].password) ? accounts[idx].password : '',
+          last_login: new Date().toISOString()
+        };
+        if (idx >= 0) {
+          accounts[idx] = { ...accounts[idx], ...acctEntry };
+        } else {
+          accounts.unshift(acctEntry);
+        }
+        localStorage.setItem('ar_customer_accounts', JSON.stringify(accounts));
+      } catch (e) { }
       isCompulsory = false;
       document.body.classList.remove('auth-locked');
       if (loginModal) loginModal.classList.remove('compulsory-mode');
