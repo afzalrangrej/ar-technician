@@ -1456,6 +1456,12 @@
       background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(20, 10, 42, 0.95));
     }
 
+    .stat-card.stat-card-btn.red-btn:hover {
+      border-color: rgba(239, 68, 68, 0.75);
+      box-shadow: 0 0 24px rgba(239, 68, 68, 0.35), 0 8px 32px rgba(0, 0, 0, 0.6);
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.16), rgba(20, 10, 42, 0.95));
+    }
+
     .stat-card.stat-card-btn:active {
       transform: translateY(-1px) scale(0.98);
     }
@@ -1507,6 +1513,13 @@
       background: rgba(52, 211, 153, 0.15);
     }
 
+    .stat-card.red-btn:hover .stat-card-arrow {
+      color: #f87171;
+      border-color: #ef4444;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.45);
+      background: rgba(239, 68, 68, 0.15);
+    }
+
     .stat-icon {
       width: 38px;
       height: 38px;
@@ -1546,6 +1559,12 @@
       background: var(--pink-dim);
       color: var(--pink);
       box-shadow: 0 0 16px rgba(244, 114, 182, 0.25);
+    }
+
+    .stat-icon.red {
+      background: rgba(239, 68, 68, 0.14);
+      color: #f87171;
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.2);
     }
 
     .stat-val {
@@ -2727,44 +2746,44 @@
             <div class="stat-card stat-card-btn cyan-btn" role="button" tabindex="0"
               onclick="navigateFromStatCard('customers')"
               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateFromStatCard('customers');}"
-              title="Click to view Registered Customers Directory">
+              title="Click to view Total Registered Customers Directory">
               <div class="stat-icon cyan"><i class="fas fa-users"></i></div>
               <div style="flex:1; min-width:0;">
                 <div class="stat-val" id="stat-customers">—</div>
-                <div class="stat-label">Registered Customers</div>
-              </div>
-              <i class="fas fa-chevron-right stat-card-arrow" aria-hidden="true"></i>
-            </div>
-            <div class="stat-card stat-card-btn amber-btn" role="button" tabindex="0"
-              onclick="navigateFromStatCard('active')"
-              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateFromStatCard('active');}"
-              title="Click to view Accepted & Active Doorstep Repairs">
-              <div class="stat-icon amber"><i class="fas fa-motorcycle"></i></div>
-              <div style="flex:1; min-width:0;">
-                <div class="stat-val" id="stat-active">—</div>
-                <div class="stat-label">Active Doorstep Repairs</div>
-              </div>
-              <i class="fas fa-chevron-right stat-card-arrow" aria-hidden="true"></i>
-            </div>
-            <div class="stat-card stat-card-btn purple-btn" role="button" tabindex="0"
-              onclick="navigateFromStatCard('total')"
-              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateFromStatCard('total');}"
-              title="Click to view All Customer Requests">
-              <div class="stat-icon purple"><i class="fas fa-clipboard-list"></i></div>
-              <div style="flex:1; min-width:0;">
-                <div class="stat-val" id="stat-total">—</div>
-                <div class="stat-label">Total Repair Tickets</div>
+                <div class="stat-label">Total Registered Customers</div>
               </div>
               <i class="fas fa-chevron-right stat-card-arrow" aria-hidden="true"></i>
             </div>
             <div class="stat-card stat-card-btn green-btn" role="button" tabindex="0"
+              onclick="navigateFromStatCard('accepted')"
+              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateFromStatCard('accepted');}"
+              title="Click to view Accepted Customers">
+              <div class="stat-icon green"><i class="fas fa-user-check"></i></div>
+              <div style="flex:1; min-width:0;">
+                <div class="stat-val" id="stat-accepted">—</div>
+                <div class="stat-label">Accepted Customers</div>
+              </div>
+              <i class="fas fa-chevron-right stat-card-arrow" aria-hidden="true"></i>
+            </div>
+            <div class="stat-card stat-card-btn red-btn" role="button" tabindex="0"
+              onclick="navigateFromStatCard('rejected')"
+              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateFromStatCard('rejected');}"
+              title="Click to view Rejected Customers">
+              <div class="stat-icon red"><i class="fas fa-user-xmark"></i></div>
+              <div style="flex:1; min-width:0;">
+                <div class="stat-val" id="stat-rejected">—</div>
+                <div class="stat-label">Rejected Customers</div>
+              </div>
+              <i class="fas fa-chevron-right stat-card-arrow" aria-hidden="true"></i>
+            </div>
+            <div class="stat-card stat-card-btn purple-btn" role="button" tabindex="0"
               onclick="navigateFromStatCard('completed')"
               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigateFromStatCard('completed');}"
-              title="Click to view Completed Repairs">
-              <div class="stat-icon green"><i class="fas fa-circle-check"></i></div>
+              title="Click to view Work Completed Repairs">
+              <div class="stat-icon purple"><i class="fas fa-circle-check"></i></div>
               <div style="flex:1; min-width:0;">
                 <div class="stat-val" id="stat-completed">—</div>
-                <div class="stat-label">Completed Repairs</div>
+                <div class="stat-label">Work Completed</div>
               </div>
               <i class="fas fa-chevron-right stat-card-arrow" aria-hidden="true"></i>
             </div>
@@ -4655,6 +4674,14 @@
       const reqBadge = document.getElementById('recent-req-count');
       if (reqBadge) reqBadge.textContent = (allOrders || []).length;
 
+      const completedOrdersCount = (allOrders || []).filter(o => {
+        const st = String(o.status || '').toLowerCase();
+        return st.includes('complete') || st.includes('done');
+      }).length;
+      setBadge('stat-accepted', acceptedOrders.length);
+      setBadge('stat-rejected', rejectedOrders.length);
+      setBadge('stat-completed', completedOrdersCount);
+
       updateCustomerSectionHeader(window.currentCustomerSection || 'pending');
       renderCurrentCustomerSection();
       filterDashOrders(window.currentDashFilter || 'all');
@@ -4712,8 +4739,10 @@
     function navigateFromStatCard(type) {
       if (type === 'customers') {
         showPanel('customers');
-      } else if (type === 'active') {
+      } else if (type === 'accepted' || type === 'active') {
         showCustomerSection('accepted');
+      } else if (type === 'rejected') {
+        showCustomerSection('rejected');
       } else if (type === 'total') {
         showCustomerSection('all');
         const sInput = document.getElementById('orders-search');
@@ -4840,18 +4869,28 @@
     }
 
     async function fetchStats() {
-      // 1. Calculate and update stats locally from allOrders immediately
-      const totalOrdersCount = (allOrders || []).length;
-      const activeOrdersCount = (allOrders || []).filter(o => o.status !== 'Completed' && o.status !== 'Cancelled' && o.status !== 'Rejected').length;
-      const completedCount = (allOrders || []).filter(o => o.status === 'Completed').length;
-      const totalCustCount = new Set((allOrders || []).map(o => o.customer_phone || o.phone).filter(Boolean)).size || Math.max(1, (allCustomers || []).length);
+      // 1. Calculate and update stats locally from allOrders & allCustomers immediately
+      const acceptedOrdersCount = (allOrders || []).filter(o => getOrderDecisionType(o) === 'accepted').length;
+      const rejectedOrdersCount = (allOrders || []).filter(o => getOrderDecisionType(o) === 'rejected').length;
+      const completedCount = (allOrders || []).filter(o => {
+        const st = String(o.status || '').toLowerCase();
+        return st.includes('complete') || st.includes('done');
+      }).length;
+      let localAccts = [];
+      try { localAccts = JSON.parse(localStorage.getItem('ar_customer_accounts') || '[]'); } catch (e) { }
+      const orderCustPhones = new Set([
+        ...(allOrders || []).map(o => o.customer_phone || o.phone).filter(Boolean),
+        ...(localAccts || []).map(a => a.phone).filter(Boolean),
+        ...(allCustomers || []).map(c => c.phone).filter(Boolean)
+      ]).size;
+      const totalCustCount = Math.max((allCustomers || []).length, orderCustPhones);
 
       const custEl = document.getElementById('stat-customers');
       if (custEl) custEl.textContent = totalCustCount;
-      const actEl = document.getElementById('stat-active');
-      if (actEl) actEl.textContent = activeOrdersCount;
-      const totEl = document.getElementById('stat-total');
-      if (totEl) totEl.textContent = totalOrdersCount;
+      const accEl = document.getElementById('stat-accepted');
+      if (accEl) accEl.textContent = acceptedOrdersCount;
+      const rejEl = document.getElementById('stat-rejected');
+      if (rejEl) rejEl.textContent = rejectedOrdersCount;
       const compEl = document.getElementById('stat-completed');
       if (compEl) compEl.textContent = completedCount;
 
@@ -4867,9 +4906,9 @@
               if (d && d.success && d.stats) {
                 const s = d.stats;
                 if (custEl) custEl.textContent = Math.max(s.totalCustomers || 0, totalCustCount);
-                if (actEl) actEl.textContent = Math.max(s.activeOrders || 0, activeOrdersCount);
-                if (totEl) totEl.textContent = Math.max(s.totalOrders || 0, totalOrdersCount);
-                if (compEl) compEl.textContent = Math.max((s.totalOrders || 0) - (s.activeOrders || 0), completedCount);
+                if (accEl) accEl.textContent = acceptedOrdersCount;
+                if (rejEl) rejEl.textContent = rejectedOrdersCount;
+                if (compEl) compEl.textContent = completedCount;
 
                 if (s.todayCollection !== undefined) {
                   window.collectionStats.daily = parseFloat(s.todayCollection).toFixed(2);
