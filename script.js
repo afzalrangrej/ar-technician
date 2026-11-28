@@ -746,6 +746,15 @@ try {
   }
 } catch (e) { }
 
+function doesBookingBelongToUser(booking, user) {
+  if (!booking || !user) return false;
+  if (booking.customer_id && user.id && String(booking.customer_id) === String(user.id)) return true;
+  const userDigits = String(user.phone || user.identifier || '').replace(/\D/g, '').slice(-10);
+  const bookDigits = String(booking.customer_phone || booking.phone || '').replace(/\D/g, '').slice(-10);
+  if (userDigits && bookDigits && userDigits === bookDigits) return true;
+  return false;
+}
+
 window.syncCustomerCodeVisibility = function () {
   if (typeof window.syncAdminButtonVisibility === 'function') {
     window.syncAdminButtonVisibility();
@@ -759,39 +768,13 @@ window.syncCustomerCodeVisibility = function () {
   const realStatusEl = document.getElementById('tracker-real-status-badge');
   const realCountEl = document.getElementById('tracker-real-booking-count');
 
-  let code = (localStorage.getItem('last_tracking_code') || '').trim();
-  let latestBooking = null;
-
-  try {
-    const localBookings = JSON.parse(localStorage.getItem('ar_local_bookings') || '[]');
-    if (Array.isArray(localBookings) && localBookings.length > 0) {
-      latestBooking = localBookings[0];
-      if (!code && latestBooking.tracking_code) {
-        code = latestBooking.tracking_code.trim();
-      }
-    }
-  } catch (e) { }
-
   let currentUser = null;
   try {
     const raw = localStorage.getItem('ar_customer_user');
     currentUser = raw ? JSON.parse(raw) : null;
   } catch (e) { }
 
-  if (currentUser) {
-    if (currentUser.orders && currentUser.orders.length > 0) {
-      if (!latestBooking) latestBooking = currentUser.orders[0];
-      if (!code && latestBooking.tracking_code) {
-        code = latestBooking.tracking_code.trim();
-      }
-    }
-    if (!code) {
-      const phoneDigits = String(currentUser.phone || currentUser.identifier || '').replace(/\D/g, '').slice(-4);
-      code = phoneDigits ? ('HOME-' + phoneDigits) : 'HOME-3282';
-    }
-  }
-
-  // Calculate total bookings across current user & local device
+  // Calculate total real bookings belonging to the current user (never auto-generate fake bookings)
   const allBookingsMap = new Map();
   if (currentUser && Array.isArray(currentUser.orders)) {
     currentUser.orders.forEach(o => {
@@ -803,6 +786,7 @@ window.syncCustomerCodeVisibility = function () {
     const localBookings = JSON.parse(localStorage.getItem('ar_local_bookings') || '[]');
     if (Array.isArray(localBookings)) {
       localBookings.forEach(o => {
+        if (currentUser && !doesBookingBelongToUser(o, currentUser)) return;
         const c = (o.tracking_code || o.code || '').trim().toUpperCase();
         if (c && !allBookingsMap.has(c)) {
           allBookingsMap.set(c, o);
@@ -812,16 +796,7 @@ window.syncCustomerCodeVisibility = function () {
   } catch (e) { }
 
   const totalBookingsCount = allBookingsMap.size;
-
-
-  if (code && !allBookingsMap.has(code.toUpperCase())) {
-    allBookingsMap.set(code.toUpperCase(), {
-      tracking_code: code,
-      device_name: (latestBooking && latestBooking.device_name) || 'Home Appliance Service',
-      status: (latestBooking && latestBooking.status) || 'Booked',
-      service_type: (latestBooking && latestBooking.service_type) || 'home'
-    });
-  }
+  const code = totalBookingsCount > 0 ? Array.from(allBookingsMap.values())[0].tracking_code : '';
 
   const allCodes = Array.from(allBookingsMap.keys());
   const allBookingsList = Array.from(allBookingsMap.values());
@@ -3627,7 +3602,7 @@ function initBookingModal() {
         deviceName: deviceCat,
         serviceType: 'home',
         issueDescription: issueDesc,
-        priceEstimate: 85
+        priceEstimate: null
       };
 
       let trackingCode = null;
@@ -3676,7 +3651,7 @@ function initBookingModal() {
         service_type: payload.serviceType || 'home',
         status: 'Pending',
         step: 1,
-        price_estimate: payload.priceEstimate || 85,
+        price_estimate: payload.priceEstimate || null,
         issue_description: payload.issueDescription || 'Doorstep repair requested',
         address: payload.address || 'Doorstep Visit (Kosamba)',
         assigned_tech: 'Awaiting Admin Approval',
@@ -4425,27 +4400,9 @@ function initUserLogin() {
               phone: '+91 ' + (rawId.slice(-10) || '8485991694'),
               email: 'service@artechnicianwork.com',
               address: 'Kosamba Workshop, Jain Mandir Road',
-              orders: [
-                {
-                  id: 10,
-                  tracking_code: 'HOME-8117',
-                  customer_id: 13,
-                  device_category: 'Agricultural Spray Pumps (Dawa Ke Pump)',
-                  device_name: 'Agricultural Spray Pumps (Dawa Ke Pump)',
-                  service_type: 'home',
-                  issue_description: 'Doorstep repair requested',
-                  price_estimate: 85,
-                  status: 'Completed',
-                  assigned_tech: 'Afzal (Lead Electrical Specialist)',
-                  notes: 'Repair completed and fully tested. Ready for bill & payment collection.',
-                  created_at: '2026-11-04 07:53:21',
-                  vehicle: 'Honda - Unicorn - GJ19 BK4745',
-                  eta_minutes: '10 mins',
-                  tech_phone: '+91 6351618067'
-                }
-              ]
+              orders: []
             };
-            userOrders = loggedUser.orders;
+            userOrders = [];
           } else {
             // Check local registered accounts on this device
             let accounts = [];
@@ -4749,6 +4706,7 @@ function initUserLogin() {
       const localBookings = JSON.parse(localStorage.getItem('ar_local_bookings') || '[]');
       if (Array.isArray(localBookings)) {
         localBookings.forEach(o => {
+          if (!doesBookingBelongToUser(o, user)) return;
           const c = (o.tracking_code || o.code || '').trim().toUpperCase();
           if (c && !allBookingsMap.has(c)) {
             allBookingsMap.set(c, o);
@@ -4808,7 +4766,6 @@ function initUserLogin() {
               <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:var(--text-muted); border-top:1px dashed rgba(255,255,255,0.08); padding-top:0.45rem;">
                 <div style="display:flex; align-items:center; gap:6px;">
                   <span>${o.service_type === 'home' ? '🏡 At-Home Visit' : '🏪 Shop Drop'}</span>
-                  ${o.price_estimate ? `<span style="color:#fbbf24; font-weight:700; margin-left:6px;">₹${escapeHtml(String(o.price_estimate))}</span>` : ''}
                 </div>
                 <div style="display:flex; align-items:center; gap:6px;">
                   <button type="button" class="btn-track-from-dash" data-code="${escapeHtml(trackingCode)}" style="background:linear-gradient(135deg, rgba(0,242,254,0.18), rgba(168,85,247,0.18)); border:1px solid var(--primary); color:var(--primary); border-radius:8px; padding:3px 10px; cursor:pointer; font-weight:700; font-size:0.75rem; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">

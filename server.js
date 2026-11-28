@@ -328,7 +328,7 @@ app.post('/api/bookings', async (req, res) => {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const trackingCode = `${prefix}-${randomNum}`;
 
-    const estPrice = parseFloat(priceEstimate) || (prefix === 'HOME' ? 85.00 : 65.00);
+    const estPrice = parseFloat(priceEstimate) || 0;
 
     // Insert Repair Order into SQL database
     const orderResult = await dbDriver.run(
