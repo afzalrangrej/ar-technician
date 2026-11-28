@@ -4105,6 +4105,9 @@ function initUserLogin() {
 
   function setCurrentUser(user) {
     if (user) {
+      const loginTimestamp = new Date().toISOString();
+      user.last_login = loginTimestamp;
+      if (!user.created_at) user.created_at = loginTimestamp;
       localStorage.setItem('ar_customer_user', JSON.stringify(user));
       // Sync logged-in user into ar_customer_accounts so Admin Customer Directory displays them
       try {
@@ -4121,7 +4124,8 @@ function initUserLogin() {
           email: user.email || (idx >= 0 ? accounts[idx].email : ''),
           address: user.address || (idx >= 0 ? accounts[idx].address : 'Kosamba, Surat'),
           password: (idx >= 0 && accounts[idx].password) ? accounts[idx].password : '',
-          last_login: new Date().toISOString()
+          created_at: (idx >= 0 && accounts[idx].created_at) ? accounts[idx].created_at : loginTimestamp,
+          last_login: loginTimestamp
         };
         if (idx >= 0) {
           accounts[idx] = { ...accounts[idx], ...acctEntry };
@@ -4605,13 +4609,16 @@ function initUserLogin() {
         try {
           const accounts = JSON.parse(localStorage.getItem('ar_customer_accounts') || '[]');
           const idx = accounts.findIndex(a => String(a.phone || '').replace(/\D/g, '') === phone);
+          const nowIso = new Date().toISOString();
           const acctData = {
             id: loggedUser.id,
             name: loggedUser.name,
             phone: loggedUser.phone,
             email: loggedUser.email,
             password: password,
-            address: loggedUser.address || 'Kosamba, Surat'
+            address: loggedUser.address || 'Kosamba, Surat',
+            created_at: nowIso,
+            last_login: nowIso
           };
           if (idx >= 0) {
             accounts[idx] = acctData;

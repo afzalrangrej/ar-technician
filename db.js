@@ -122,6 +122,7 @@ async function initDatabase() {
     try { await dbDriver.run(`ALTER TABLE repair_orders ADD COLUMN vehicle TEXT DEFAULT 'Honda - Unicorn - GJ19 BK4745'`); } catch (e) {}
     try { await dbDriver.run(`ALTER TABLE repair_orders ADD COLUMN eta_minutes TEXT DEFAULT '15 mins'`); } catch (e) {}
     try { await dbDriver.run(`ALTER TABLE repair_orders ADD COLUMN tech_phone TEXT DEFAULT '+91 6351618067'`); } catch (e) {}
+    try { await dbDriver.run(`ALTER TABLE customers ADD COLUMN last_login DATETIME`); } catch (e) {}
 
     // 4. SITE ANNOUNCEMENTS TABLE (Broadcast from Admin to User Side)
     await dbDriver.run(`

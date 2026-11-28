@@ -470,6 +470,11 @@ app.post('/api/user/login', async (req, res) => {
       return res.status(404).json({ error: 'Account not found! Please click "Sign Up" above to register your account.' });
     }
 
+    // Record latest website login timestamp
+    try {
+      await dbDriver.run(`UPDATE customers SET last_login = CURRENT_TIMESTAMP WHERE id = ?`, [customer.id]);
+    } catch (e) { }
+
     // Fetch this customer's orders
     const orders = await dbDriver.query(
       `SELECT * FROM repair_orders WHERE customer_id = ? ORDER BY id DESC`,
@@ -540,6 +545,9 @@ app.post('/api/user/signup', async (req, res) => {
         `UPDATE customers SET name = ?, email = COALESCE(?, email), address = COALESCE(?, address) WHERE id = ?`,
         [cleanName, cleanEmail, cleanAddr, customer.id]
       );
+      try {
+        await dbDriver.run(`UPDATE customers SET last_login = CURRENT_TIMESTAMP WHERE id = ?`, [customer.id]);
+      } catch (e) { }
       customerId = customer.id;
     } else {
       const cRes = await dbDriver.run(
@@ -547,6 +555,9 @@ app.post('/api/user/signup', async (req, res) => {
         [cleanName, cleanPhone, cleanEmail, cleanAddr]
       );
       customerId = cRes.lastID;
+      try {
+        await dbDriver.run(`UPDATE customers SET last_login = CURRENT_TIMESTAMP WHERE id = ?`, [customerId]);
+      } catch (e) { }
     }
 
     // 3. Fetch any orders for this customer
